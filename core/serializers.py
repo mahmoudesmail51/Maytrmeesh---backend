@@ -52,9 +52,35 @@ class FoodVenueSerializer(serializers.ModelSerializer):
         location = self.validated_data['location']
         image = self.validated_data['image']
         bank_account_number = self.validated_data['bank_account_number']
-        venues = FoodVenueManager.get_venues(self,location= location)
+        venues = FoodVenue.objects.get_venues(location= location)
         for venue in venues:
             if(venue.name == name and venue.location == location):
                 raise serializers.ValidationError ({'venue':'already exist with same name and location'})
         venue = FoodVenue.objects.create_venue(owner= owner_id, name= name, location= location, image= image, bank_account_number= bank_account_number)
         return venue
+
+
+class ItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Item
+        fields = ['name','image','category','original_price','food_venues'
+                ]
+
+
+class ReviewsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ['comment','rating','customer','food_venue']
+
+    def save(self):
+        comment = self.validated_data['comment']
+        rating = self.validated_data['rating']
+        customer = self.validated_data['customer']
+        food_venue = self.validated_data['food_venue']
+        if(rating <= 5 and rating >= 0):
+            review = Review.objects.add_review(comment=comment, rating= rating, customer = customer, food_venue= food_venue)
+            return review
+        else:
+            raise serializers.ValidationError({'rating':'rating should be between 0 and 5'})
+       
+            

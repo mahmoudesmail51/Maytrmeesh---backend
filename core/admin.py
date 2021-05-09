@@ -9,3 +9,5 @@ from core import models
 admin.site.register(models.User)
 admin.site.register(models.Customer)
 admin.site.register(models.FoodVenue)
+admin.site.register(models.Item)
+admin.site.register(models.Review)

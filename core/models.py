@@ -82,8 +82,13 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
 
 class FoodVenueManager(models.Manager):
     """ return objects with location x"""
-    def get_venues(location):
-        return FoodVenue.objects.filter(location = "x")
+    def get_venues(self,location):
+        return FoodVenue.objects.filter(location = location)
+    
+    def create_venue(self, owner, name, location, image, bank_account_number):
+        food_venue = self.model(owner= owner, name= name, location= location, image= image, bank_account_number = bank_account_number)
+        food_venue.save(using = self._db)
+        return food_venue
 
 class FoodVenue(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -92,3 +97,41 @@ class FoodVenue(models.Model):
     image = models.ImageField()
     bank_account_number = models.CharField(max_length=255)
     objects = FoodVenueManager()
+
+class Item(models.Model):
+    name = models.CharField(max_length=255)
+    image = models.ImageField()
+    BAKERY = 'BK'
+    PASTRY = 'PA'
+    GRILLS = 'GR'
+    SUSHI = 'SH'
+    DRINKS = 'DR'
+    OT = 'OT'
+    category_types = [
+        (BAKERY,'Bakery'),
+        (PASTRY,'Pastry'),
+        (GRILLS,'Grills'),
+        (SUSHI,'Sushi'),
+        (DRINKS,'Drinks'),
+        (OT,'Others'),
+    ]
+    category = models.CharField(choices=category_types,max_length=2)
+    original_price = models.DecimalField(max_length=10 ,max_digits=10,decimal_places=2)
+    food_venues = models.ManyToManyField(FoodVenue)
+
+
+
+class ReviewManager(models.Manager):
+    """ Adds a new review"""
+    def add_review(self, comment, rating, customer, food_venue):
+        review = self.model(comment = comment, rating = rating, customer = customer, food_venue = food_venue)
+        review.save(using = self.db)
+        return review
+        
+
+class Review(models.Model):
+    comment = models.TextField(max_length=255)
+    rating = models.DecimalField(max_length=10, max_digits=10 , decimal_places= 1)
+    customer = models.ForeignKey(Customer, on_delete= models.CASCADE)
+    food_venue = models.ForeignKey(FoodVenue, on_delete= models.CASCADE)
+    objects = ReviewManager()

@@ -5,7 +5,7 @@ from core.serializers import *
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 
 # Create your views here.
 class CustomerViewSet(viewsets.ModelViewSet):
@@ -31,9 +31,12 @@ class CustomerViewSet(viewsets.ModelViewSet):
         name = self.request.query_params.get('item_ids')
         return Response(name)
     
+    
+    
+    @action(methods=['post'], detail=True,url_path='<int:id>',url_name='hi')
+    def hi(self, request,**kwargs):
 
-
-
+        return Response(kwargs)
 
 
 class FoodVenueViewSet(viewsets.ModelViewSet):
@@ -49,7 +52,6 @@ class FoodVenueViewSet(viewsets.ModelViewSet):
             data['name'] = venue.name
         else:
             data = serializer.errors
-        
         return Response(data)
 
     def list(self, request, *args, **kwargs):
@@ -79,4 +81,41 @@ class FoodVenueViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         else:
             return Response("owner not found",status = 404)
+    
+
+    @action(detail=True)
+    def getItems(self,request,**kwargs):
+        food_venue = self.get_object()
+        items = Item.objects.filter(food_venues=food_venue)
+        serializer = ItemSerializer(items, many = True)
+        if serializer.data:
+            return Response(serializer.data)      
+        return Response("No items available for this food venue", status = 404)
         
+    
+   
+
+
+class ItemViewSet(viewsets.ModelViewSet):
+    queryset = Item.objects.all()
+    serializer_class = ItemSerializer
+
+
+
+@api_view(['POST'])
+def review(request,**kwargs):
+    data={}
+    data['comment']= request.data['comment']
+    data['rating']= request.data['rating']
+    data['customer']= kwargs['customer_id']
+    data['food_venue']= kwargs['venue_id']
+    serializer = ReviewsSerializer(data = data)
+    temp = {}
+    if serializer.is_valid():
+        review = serializer.save()
+        temp['response']= "Added successfully"
+        temp ['review_comment'] = review.comment
+    else:
+        temp = serializer.errors
+    return Response(temp)
+
