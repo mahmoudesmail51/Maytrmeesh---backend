@@ -67,7 +67,7 @@ class ItemSerializer(serializers.ModelSerializer):
                 ]
 
 
-class ReviewsSerializer(serializers.ModelSerializer):
+class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ['comment','rating','customer','food_venue']

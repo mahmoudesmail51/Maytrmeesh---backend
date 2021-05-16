@@ -33,10 +33,10 @@ class CustomerViewSet(viewsets.ModelViewSet):
     
     
     
-    @action(methods=['post'], detail=True,url_path='<int:id>',url_name='hi')
+    @action(methods=['post'], detail=True)
     def hi(self, request,**kwargs):
-
-        return Response(kwargs)
+        customer = Customer.objects.get(user = request.user.id)
+        return Response(customer.id)
 
 
 class FoodVenueViewSet(viewsets.ModelViewSet):
@@ -91,6 +91,35 @@ class FoodVenueViewSet(viewsets.ModelViewSet):
         if serializer.data:
             return Response(serializer.data)      
         return Response("No items available for this food venue", status = 404)
+
+    
+    @action(detail=True,methods=['POST','GET'])
+    def review(self,request,**kwargs):
+        if request.method == 'GET':
+            """ get all reviews for a specific food venue"""
+            food_venue = self.get_object()
+            reviews = Review.objects.filter(food_venue= food_venue )
+            serializer = ReviewSerializer(reviews, many= True)
+            if serializer.data:
+                return Response(serializer.data)
+            return Response("No reviews available for this food venue",status = 404)
+        else:
+            """ Post request , add review for a specific food venue for a specific customer"""
+            data = {}
+            data['comment']= request.data['comment']
+            data['rating']= request.data['rating']
+            data['customer']= request.data['customer_id']
+            data['food_venue']= kwargs['pk']
+            serializer = ReviewSerializer(data= data)
+            temp = {}
+            if serializer.is_valid():
+                review = serializer.save()
+                temp['response'] = "Review added"
+                temp ['comment'] = review.comment
+            else:
+                temp = serializer.errors
+            return Response(temp)
+
         
     
    
@@ -100,22 +129,20 @@ class ItemViewSet(viewsets.ModelViewSet):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
 
+    @action(detail=True,methods=['POST'])
+    def favorite(self, request, **kwargs):
+        """ get customer """
+        item = self.get_object()
+        customer = Customer.objects.get(user= request.user.id)
+        if not (favorite_item.objects.check_if_liked(customer,item)):
+            favorite_item.objects.add(customer,item)
+            return Response("Favorite")
+        return Response("Already favorite")
+
+    
+    @action(detail = True,methods)
+    
 
 
-@api_view(['POST'])
-def review(request,**kwargs):
-    data={}
-    data['comment']= request.data['comment']
-    data['rating']= request.data['rating']
-    data['customer']= kwargs['customer_id']
-    data['food_venue']= kwargs['venue_id']
-    serializer = ReviewsSerializer(data = data)
-    temp = {}
-    if serializer.is_valid():
-        review = serializer.save()
-        temp['response']= "Added successfully"
-        temp ['review_comment'] = review.comment
-    else:
-        temp = serializer.errors
-    return Response(temp)
+
 

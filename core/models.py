@@ -116,6 +116,7 @@ class Item(models.Model):
         (OT,'Others'),
     ]
     category = models.CharField(choices=category_types,max_length=2)
+    description = models.TextField(max_length=255,default="")
     original_price = models.DecimalField(max_length=10 ,max_digits=10,decimal_places=2)
     food_venues = models.ManyToManyField(FoodVenue)
 
@@ -135,3 +136,25 @@ class Review(models.Model):
     customer = models.ForeignKey(Customer, on_delete= models.CASCADE)
     food_venue = models.ForeignKey(FoodVenue, on_delete= models.CASCADE)
     objects = ReviewManager()
+
+
+
+
+class favorite_items_manager(models.Manager):
+    """ favorite item for a user"""
+    def add(self,customer,item):
+        temp = self.model(customer= customer, item= item)
+        temp.save(using = self.db)
+        return temp
+    
+    def check_if_liked(self,customer,item):
+        favorites = favorite_item.objects.all()
+        for favorite in favorites:
+            if favorite.customer == customer and favorite.item == item:
+                return True
+        return False
+
+class favorite_item(models.Model):
+    customer = models.ForeignKey(Customer, on_delete= models.CASCADE)
+    item = models.ForeignKey(Item, on_delete= models.CASCADE)
+    objects = favorite_items_manager()
