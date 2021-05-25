@@ -1,14 +1,17 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager , PermissionsMixin
-
-
-
-
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from rest_framework.authtoken.models import Token
 
+
+
+#Automatically generates auth-token for users saved in the system
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_auth_token(sender, instance=None, created=False, **kwargs):
+    if created:
+        Token.objects.create(user=instance)
 
 class UserManager(BaseUserManager):
     """ Manager for users"""
@@ -72,11 +75,7 @@ class Customer(models.Model):
     def __str__(self):
         return self.first_name +" "+ self.last_name
 
-#Automatically generates auth-token for users saved in the system
-@receiver(post_save, sender=settings.AUTH_USER_MODEL)
-def create_auth_token(sender, instance=None, created=False, **kwargs):
-    if created:
-        Token.objects.create(user=instance)
+
 
 
 
@@ -89,6 +88,13 @@ class FoodVenueManager(models.Manager):
         food_venue = self.model(owner= owner, name= name, location= location, image= image, bank_account_number = bank_account_number)
         food_venue.save(using = self._db)
         return food_venue
+    
+    def is_exist(self,id):
+        venues = FoodVenue.objects.all()
+        for venue in venues:
+            if venue.id == int(id):
+                return True
+        return False
 
 class FoodVenue(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -98,6 +104,23 @@ class FoodVenue(models.Model):
     bank_account_number = models.CharField(max_length=255)
     objects = FoodVenueManager()
 
+
+class ReviewManager(models.Manager):
+    """ Adds a new review"""
+    def add_review(self, comment, rating, customer, food_venue):
+        review = self.model(comment = comment, rating = rating, customer = customer, food_venue = food_venue)
+        review.save(using = self.db)
+        return review
+        
+
+class Review(models.Model):
+    comment = models.TextField(max_length=255)
+    rating = models.DecimalField(max_length=10, max_digits=10 , decimal_places= 1)
+    customer = models.ForeignKey(Customer, on_delete= models.CASCADE)
+    food_venue = models.ForeignKey(FoodVenue, on_delete= models.CASCADE)
+    objects = ReviewManager()
+
+    
 class Item(models.Model):
     name = models.CharField(max_length=255)
     image = models.ImageField()
@@ -119,42 +142,23 @@ class Item(models.Model):
     description = models.TextField(max_length=255,default="")
     original_price = models.DecimalField(max_length=10 ,max_digits=10,decimal_places=2)
     food_venues = models.ManyToManyField(FoodVenue)
+    favorite_by = models.ManyToManyField(Customer)
 
 
 
-class ReviewManager(models.Manager):
-    """ Adds a new review"""
-    def add_review(self, comment, rating, customer, food_venue):
-        review = self.model(comment = comment, rating = rating, customer = customer, food_venue = food_venue)
-        review.save(using = self.db)
-        return review
-        
 
-class Review(models.Model):
-    comment = models.TextField(max_length=255)
-    rating = models.DecimalField(max_length=10, max_digits=10 , decimal_places= 1)
-    customer = models.ForeignKey(Customer, on_delete= models.CASCADE)
+class Package(models.Model):
+    name = models.CharField(max_length=255)
+    image = models.ImageField()
+    description = models.TextField(max_length=255,default="")
     food_venue = models.ForeignKey(FoodVenue, on_delete= models.CASCADE)
-    objects = ReviewManager()
-
-
-
-
-class favorite_items_manager(models.Manager):
-    """ favorite item for a user"""
-    def add(self,customer,item):
-        temp = self.model(customer= customer, item= item)
-        temp.save(using = self.db)
-        return temp
+    items = models.ManyToManyField(Item)
+    favorite_by = models.ManyToManyField(Customer)
     
-    def check_if_liked(self,customer,item):
-        favorites = favorite_item.objects.all()
-        for favorite in favorites:
-            if favorite.customer == customer and favorite.item == item:
-                return True
-        return False
 
-class favorite_item(models.Model):
-    customer = models.ForeignKey(Customer, on_delete= models.CASCADE)
-    item = models.ForeignKey(Item, on_delete= models.CASCADE)
-    objects = favorite_items_manager()
+
+
+
+
+
+   

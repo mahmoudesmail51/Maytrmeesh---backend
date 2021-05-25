@@ -10,6 +10,7 @@ router = routers.DefaultRouter()
 router.register('customers', CustomerViewSet)
 router.register('venues', FoodVenueViewSet)
 router.register('items',ItemViewSet)
+router.register('packages',PackageViewSet)
 
 
 

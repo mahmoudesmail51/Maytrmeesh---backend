@@ -6,6 +6,8 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action, api_view
+from rest_framework import filters
+
 
 # Create your views here.
 class CustomerViewSet(viewsets.ModelViewSet):
@@ -42,6 +44,10 @@ class CustomerViewSet(viewsets.ModelViewSet):
 class FoodVenueViewSet(viewsets.ModelViewSet):
     queryset = FoodVenue.objects.all()
     serializer_class = FoodVenueSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'location']
+
+
 
     def create(self, request, *args , **kwargs):
         serializer = self.get_serializer(data = request.data)
@@ -54,19 +60,8 @@ class FoodVenueViewSet(viewsets.ModelViewSet):
             data = serializer.errors
         return Response(data)
 
-    def list(self, request, *args, **kwargs):
-        if request.data:
-            location = request.data['location']
-            filtered_venues = self.queryset.filter(location = location)
-        else:
-            filtered_venues = self.queryset
-        serializer = self.get_serializer(filtered_venues, many= True)
-        if serializer.data:
-            return Response(serializer.data)
-        return Response("No available venues")
-
+  
     def update(self, request, *args, **kwargs):
-
         venue = self.get_object()
         data = request.data
         owner = User.objects.get_user(id= data['owner'])
@@ -83,7 +78,7 @@ class FoodVenueViewSet(viewsets.ModelViewSet):
             return Response("owner not found",status = 404)
     
 
-    @action(detail=True)
+    @action(detail=True,url_path='Items')
     def getItems(self,request,**kwargs):
         food_venue = self.get_object()
         items = Item.objects.filter(food_venues=food_venue)
@@ -134,13 +129,44 @@ class ItemViewSet(viewsets.ModelViewSet):
         """ get customer """
         item = self.get_object()
         customer = Customer.objects.get(user= request.user.id)
-        if not (favorite_item.objects.check_if_liked(customer,item)):
-            favorite_item.objects.add(customer,item)
-            return Response("Favorite")
-        return Response("Already favorite")
+        item.favorite_by.add(customer)
+        item.save()
+        return Response("Success")
+        
 
+      
+
+
+    @action(detail=True, methods=['POST'],url_path='assign')
+    def assign_foodvenue(self,request, **kwargs):
+        item = self.get_object()
+        food_venue_id = request.data['food_venue']
+        exist = FoodVenue.objects.is_exist(food_venue_id)
+        if exist:
+            food_venue = FoodVenue.objects.get(id=food_venue_id)
+            item.food_venues.add(food_venue)
+            return Response("Assigned Successfully")
+        else:
+            return Response("Food venue not found")
+
+        
+        
+       
     
-    @action(detail = True,methods)
+
+class PackageViewSet(viewsets.ModelViewSet):
+    queryset = Package.objects.all()
+    serializer_class = PackageSerializer
+    
+    @action(detail=True,methods=['POST'])
+    def favorite(self, request, **kwargs):
+        """ get customer """
+        package = self.get_object()
+        customer = Customer.objects.get(user= request.user.id)
+        package.favorite_by.add(customer)
+        package.save()
+        return Response("Success")
+        
     
 
 

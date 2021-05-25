@@ -42,7 +42,7 @@ class CustomerSerializer(serializers.ModelSerializer):
 class FoodVenueSerializer(serializers.ModelSerializer):
     class Meta:
         model = FoodVenue
-        fields = ['owner', 'name', 'location', 'image','bank_account_number'
+        fields = ['id','owner', 'name', 'location', 'image','bank_account_number'
                  ]
     
     def save(self):
@@ -60,13 +60,6 @@ class FoodVenueSerializer(serializers.ModelSerializer):
         return venue
 
 
-class ItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Item
-        fields = ['name','image','category','original_price','food_venues'
-                ]
-
-
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
@@ -82,5 +75,20 @@ class ReviewSerializer(serializers.ModelSerializer):
             return review
         else:
             raise serializers.ValidationError({'rating':'rating should be between 0 and 5'})
+
+
+class ItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Item
+        fields = ['id','name','image','category','original_price','food_venues','favorite_by'
+                ]
+
+
+
        
-            
+class PackageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Package
+        fields =['id', 'name', 'image','description' ,'food_venue', 'favorite_by'
+
+        ]
