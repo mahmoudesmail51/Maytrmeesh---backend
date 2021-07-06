@@ -1,3 +1,4 @@
+from django.db.models import query
 from django.shortcuts import render
 
 from core.models import *
@@ -14,6 +15,10 @@ class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all()
     serializer_class = CustomerRegestirationSerializer
 
+
+
+   
+    
     def create(self, request, *args, **kwargs):
         """ post request"""
         serializer = self.get_serializer(data=request.data)
@@ -29,16 +34,21 @@ class CustomerViewSet(viewsets.ModelViewSet):
             data = serializer.errors
         return Response(data)
     
-    def list(self, request, *args, **kwargs):
-        name = self.request.query_params.get('item_ids')
-        return Response(name)
     
+    def list(self, request, *args, **kwargs):
+        customers = self.get_queryset()
+        serializer = CustomerSerializer(customers, many= True)
+        return Response(serializer.data)
+
+  
     
     
     @action(methods=['post'], detail=True)
     def hi(self, request,**kwargs):
         customer = Customer.objects.get(user = request.user.id)
         return Response(customer.id)
+
+
 
 
 class FoodVenueViewSet(viewsets.ModelViewSet):
@@ -172,3 +182,18 @@ class PackageViewSet(viewsets.ModelViewSet):
 
 
 
+class AvailableItemsViewSet(viewsets.ModelViewSet):
+    queryset = available_item.objects.all()
+    serializer_class = AvailableItemsSerialzier
+
+    def create(self, request, *args , **kwargs):
+        """ adds a new item"""
+        serializer = self.get_serializer(data = request.data)
+        data = {}
+        if serializer.is_valid():
+            available_item = serializer.save()
+            data['response'] = "Added successfully"
+            data['item_name'] = available_item.item.name
+        else:
+            data = serializer.errors
+        return Response(data)

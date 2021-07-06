@@ -82,13 +82,36 @@ class ItemSerializer(serializers.ModelSerializer):
         model = Item
         fields = ['id','name','image','category','original_price','food_venues','favorite_by'
                 ]
+        extra_kwargs = {
+            'favorite_by':{'read_only': True},
+            
+        }
 
-
-
-       
 class PackageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Package
-        fields =['id', 'name', 'image','description' ,'food_venue', 'favorite_by'
+        fields =['id', 'name', 'image','description' ,'food_venue', 'favorite_by', 'items'
 
         ]
+        extra_kwargs = {
+            'favorite_by':{'read_only': True},
+            
+        }
+
+class AvailableItemsSerialzier(serializers.ModelSerializer):
+   
+    class Meta:
+        model = available_item
+        fields = ['id','item','quantity','discount','price','availablity_time']
+    
+    def save(self):
+        """ adds a new item to available items """
+        item = self.validated_data['item']
+        quantity = self.validated_data['quantity']
+        discount = self.validated_data ['discount']
+        price = self.validated_data['price']
+        availablity_time = self.validated_data['availablity_time']
+        item = available_item.objects.add_item(item= item, quantity= quantity, discount= discount, price = price, availablity_time = availablity_time)
+        return item
+        
+

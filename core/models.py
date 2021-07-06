@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager , PermissionsMixin
 from django.conf import settings
+from django.db.models.fields import DateTimeField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from rest_framework.authtoken.models import Token
@@ -77,8 +78,6 @@ class Customer(models.Model):
 
 
 
-
-
 class FoodVenueManager(models.Manager):
     """ return objects with location x"""
     def get_venues(self,location):
@@ -141,10 +140,9 @@ class Item(models.Model):
     category = models.CharField(choices=category_types,max_length=2)
     description = models.TextField(max_length=255,default="")
     original_price = models.DecimalField(max_length=10 ,max_digits=10,decimal_places=2)
+    is_served = models.BooleanField(default=False)
     food_venues = models.ManyToManyField(FoodVenue)
     favorite_by = models.ManyToManyField(Customer)
-
-
 
 
 class Package(models.Model):
@@ -152,13 +150,27 @@ class Package(models.Model):
     image = models.ImageField()
     description = models.TextField(max_length=255,default="")
     food_venue = models.ForeignKey(FoodVenue, on_delete= models.CASCADE)
+    is_served = models.BooleanField(default=False)
     items = models.ManyToManyField(Item)
     favorite_by = models.ManyToManyField(Customer)
-    
 
 
 
+class available_item_manager(models.Manager):
+    """manager for available item"""
+    def add_item(self, item, quantity, discount, price, availablity_time):
+        item = self.model( item = item, quantity= quantity, discount = discount, price = price,availablity_time = availablity_time)
+        item.save(using = self._db)
+        return item
 
 
+class available_item(models.Model):
+
+    item = models.ForeignKey(Item, on_delete= models.CASCADE)
+    quantity = models.IntegerField()
+    discount = models.IntegerField()
+    price = models.DecimalField(max_length=10 ,max_digits=10,decimal_places=2)
+    availablity_time = models.IntegerField()
+    objects = available_item_manager()
 
    
