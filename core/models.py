@@ -1,6 +1,8 @@
+
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager , PermissionsMixin
 from django.conf import settings
+from django.db.models.expressions import F
 from django.db.models.fields import DateTimeField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -65,7 +67,7 @@ class CustomerManager(models.Manager):
 
 class Customer(models.Model):
     """ Database model for customers"""
-    user = models.OneToOneField(User,on_delete= models.CASCADE)
+    user = models.OneToOneField(User, on_delete= models.CASCADE)
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     date_of_birth = models.DateField()
@@ -75,8 +77,6 @@ class Customer(models.Model):
 
     def __str__(self):
         return self.first_name +" "+ self.last_name
-
-
 
 class FoodVenueManager(models.Manager):
     """ return objects with location x"""
@@ -96,13 +96,14 @@ class FoodVenueManager(models.Manager):
         return False
 
 class FoodVenue(models.Model):
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    manager = models.OneToOneField(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     location = models.CharField(max_length=255)
     image = models.ImageField()
     bank_account_number = models.CharField(max_length=255)
     objects = FoodVenueManager()
 
+    
 
 class ReviewManager(models.Manager):
     """ Adds a new review"""
@@ -111,7 +112,6 @@ class ReviewManager(models.Manager):
         review.save(using = self.db)
         return review
         
-
 class Review(models.Model):
     comment = models.TextField(max_length=255)
     rating = models.DecimalField(max_length=10, max_digits=10 , decimal_places= 1)
@@ -142,35 +142,85 @@ class Item(models.Model):
     original_price = models.DecimalField(max_length=10 ,max_digits=10,decimal_places=2)
     is_served = models.BooleanField(default=False)
     food_venues = models.ManyToManyField(FoodVenue)
-    favorite_by = models.ManyToManyField(Customer)
-
+    favorite_by = models.ManyToManyField(Customer,blank=True)
 
 class Package(models.Model):
     name = models.CharField(max_length=255)
-    image = models.ImageField()
+    image = models.ImageField(blank=True)
     description = models.TextField(max_length=255,default="")
     food_venue = models.ForeignKey(FoodVenue, on_delete= models.CASCADE)
     is_served = models.BooleanField(default=False)
     items = models.ManyToManyField(Item)
-    favorite_by = models.ManyToManyField(Customer)
+    favorite_by = models.ManyToManyField(Customer,blank=True)
 
 
 
 class available_item_manager(models.Manager):
-    """manager for available item"""
-    def add_item(self, item, quantity, discount, price, availablity_time):
-        item = self.model( item = item, quantity= quantity, discount = discount, price = price,availablity_time = availablity_time)
+    """manager for available items"""
+    def add_item(self, item, food_venue,quantity, discount, price, availablity_time):
+        item = self.model( item = item, food_venue = food_venue, quantity= quantity, discount = discount, price = price,availablity_time = availablity_time)
         item.save(using = self._db)
         return item
 
 
 class available_item(models.Model):
-
+    class Meta:
+        unique_together = (('food_venue','item'),)
+    food_venue = models.ForeignKey(FoodVenue, on_delete= models.CASCADE)
     item = models.ForeignKey(Item, on_delete= models.CASCADE)
+  
     quantity = models.IntegerField()
     discount = models.IntegerField()
-    price = models.DecimalField(max_length=10 ,max_digits=10,decimal_places=2)
+    price = models.DecimalField(max_length=10 , max_digits=10, decimal_places=2)
     availablity_time = models.IntegerField()
     objects = available_item_manager()
 
    
+
+class available_package_manager(models.Manager):
+    """Manager for available packages"""
+
+    def add_package(self, food_venue, package, quantity, discount, price, availablity_time):
+        package = self.model(package = package, food_venue =food_venue, quantity = quantity, price = price, discount = discount , availablity_time = availablity_time)
+        package.save(using = self._db)
+        return package
+
+
+
+class available_package(models.Model):
+
+    class Meta:
+        unique_together = (('food_venue','package'),)
+
+    food_venue = models.ForeignKey(FoodVenue, on_delete= models.CASCADE)
+    package = models.ForeignKey(Package, on_delete= models.CASCADE)
+    
+    quantity = models.IntegerField()
+    discount = models.IntegerField()
+    price = models.DecimalField(max_length=10 , max_digits=10, decimal_places=2)
+    availablity_time = models.IntegerField()
+    objects = available_package_manager()
+
+
+
+
+class Order (models.Model):
+    customer = models.ForeignKey(Customer, on_delete= models.CASCADE)
+    food_venue = models.ForeignKey(FoodVenue, on_delete= models.CASCADE)
+    is_donated = models.BooleanField(default= False)
+    total = models.DecimalField(max_length=10 ,max_digits=10,decimal_places=2)
+    order_time = models.DateTimeField(default= None)
+    items = models.ManyToManyField(Item, blank=True , through='orderItem')
+    packages = models.ManyToManyField(Package, blank=True, through='orderPackage')
+    order_type = models.TextField()
+
+
+class orderItem(models.Model):
+    item = models.ForeignKey(Item, on_delete= models.CASCADE)
+    order = models.ForeignKey(Order, on_delete= models.CASCADE)
+    quantity = models.IntegerField()
+
+class orderPackage(models.Model):
+    package = models.ForeignKey(Package, on_delete= models.CASCADE)
+    order = models.ForeignKey(Order, on_delete= models.CASCADE)
+    quantity = models.IntegerField()

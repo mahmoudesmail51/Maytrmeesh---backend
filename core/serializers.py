@@ -1,16 +1,24 @@
+from django.db.models import fields
 from rest_framework import serializers
 
 from core.models import *
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = '__all__'
+       
 
 class CustomerRegestirationSerializer(serializers.ModelSerializer):
 
     email = serializers.EmailField()
     password = serializers.CharField(style={'input_type': 'password'},write_only= True )
     password2 = serializers.CharField(style={'input_type': 'password'},write_only= True  )
+    fullname = serializers.CharField()
     class Meta:
         model = Customer
-        fields = ['email','password','password2','first_name', 
-                'last_name','date_of_birth','phone_number']
+        fields = ['email','password','password2', 'fullname',  'date_of_birth','phone_number']
         extra_kwargs = {
             'password':{'write_only': True},
             'password2':{'write_only': True}
@@ -24,8 +32,9 @@ class CustomerRegestirationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'password':'Passwords must match'})  
         email = self.validated_data['email']
         user = User.objects.create_user(email=email, password= password)
-        first_name = self.validated_data['first_name']
-        last_name = self.validated_data['last_name']
+        temp = self.validated_data['fullname'].split()
+        first_name = temp[0]
+        last_name = temp[1]
         date_of_birth = self.validated_data['date_of_birth']
         phone_number = self.validated_data['phone_number']
         user.is_customer = True
@@ -38,16 +47,21 @@ class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = '__all__'
+       
 
 class FoodVenueSerializer(serializers.ModelSerializer):
+   
     class Meta:
         model = FoodVenue
-        fields = ['id','owner', 'name', 'location', 'image','bank_account_number'
-                 ]
+        fields = ['id','manager', 'name', 'location', 'image','bank_account_number']
+        extra_kwargs = {
+            'manager':{'write_only': True},
+            'bank_account_number':{'write_only': True}
+        }
     
     def save(self):
         """ saves a new food venue and returns it"""
-        owner_id = self.validated_data['owner']
+        manager_id = self.validated_data['manager']
         name = self.validated_data['name']
         location = self.validated_data['location']
         image = self.validated_data['image']
@@ -56,7 +70,7 @@ class FoodVenueSerializer(serializers.ModelSerializer):
         for venue in venues:
             if(venue.name == name and venue.location == location):
                 raise serializers.ValidationError ({'venue':'already exist with same name and location'})
-        venue = FoodVenue.objects.create_venue(owner= owner_id, name= name, location= location, image= image, bank_account_number= bank_account_number)
+        venue = FoodVenue.objects.create_venue(manager= manager_id, name= name, location= location, image= image, bank_account_number= bank_account_number)
         return venue
 
 
@@ -78,40 +92,90 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class ItemSerializer(serializers.ModelSerializer):
+    food_venues = FoodVenueSerializer(many = True,write_only = True)
     class Meta:
         model = Item
-        fields = ['id','name','image','category','original_price','food_venues','favorite_by'
-                ]
+        fields = ['id','name','description','image','category','original_price','food_venues','favorite_by']
         extra_kwargs = {
-            'favorite_by':{'read_only': True},
-            
+            'favorite_by':{'write_only': True},
+            'original_price' :{'write_only': True}
+          
         }
+        
+        
 
 class PackageSerializer(serializers.ModelSerializer):
+    food_venue = FoodVenueSerializer(write_only = True)
+    items = ItemSerializer(many = True)
     class Meta:
         model = Package
-        fields =['id', 'name', 'image','description' ,'food_venue', 'favorite_by', 'items'
-
-        ]
+        fields =['id', 'name', 'image','description' , 'food_venue', 'favorite_by','items']
         extra_kwargs = {
-            'favorite_by':{'read_only': True},
-            
+            'favorite_by':{'write_only': True},
         }
+        
+        
+        
 
-class AvailableItemsSerialzier(serializers.ModelSerializer):
+class AvailableItemsCreateSerialzier(serializers.ModelSerializer):
    
     class Meta:
         model = available_item
-        fields = ['id','item','quantity','discount','price','availablity_time']
+        fields = ['id','food_venue','item','quantity','discount','price','availablity_time']
     
     def save(self):
         """ adds a new item to available items """
+        food_venue = self.validated_data['food_venue']
         item = self.validated_data['item']
         quantity = self.validated_data['quantity']
         discount = self.validated_data ['discount']
         price = self.validated_data['price']
         availablity_time = self.validated_data['availablity_time']
-        item = available_item.objects.add_item(item= item, quantity= quantity, discount= discount, price = price, availablity_time = availablity_time)
-        return item
+        a_item = available_item.objects.add_item(item= item, food_venue = food_venue ,quantity= quantity, discount= discount, price = price, availablity_time = availablity_time)
+        return a_item
         
 
+
+class AvailableItemsSerialzier(serializers.ModelSerializer):
+     
+     food_venue = FoodVenueSerializer()
+     item = ItemSerializer()
+     class Meta:
+        model = available_item
+        fields = ['id','food_venue','item','quantity','discount','price','availablity_time']
+        
+
+
+class AvailablePackagesCreateSerialzier(serializers.ModelSerializer):
+   
+    class Meta:
+        model = available_package
+        fields = ['id','food_venue','package','quantity','discount','price','availablity_time']
+    
+    def save(self):
+        """ adds a new item to available items """
+        food_venue = self.validated_data['food_venue']
+        package = self.validated_data['package']
+        quantity = self.validated_data['quantity']
+        discount = self.validated_data ['discount']
+        price = self.validated_data['price']
+        availablity_time = self.validated_data['availablity_time']
+        a_package = available_package.objects.add_package(package= package, food_venue = food_venue ,quantity= quantity, discount= discount, price = price, availablity_time = availablity_time)
+        return a_package
+        
+
+
+class AvailablePackagesSerialzier(serializers.ModelSerializer):
+    food_venue = FoodVenueSerializer()
+    package = PackageSerializer()
+    class Meta:
+        model = available_package
+        fields = ['id','food_venue','package','quantity','discount','price','availablity_time']
+        
+
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = '__all__'

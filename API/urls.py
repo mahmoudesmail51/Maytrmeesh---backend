@@ -12,6 +12,8 @@ router.register('venues', FoodVenueViewSet)
 router.register('items',ItemViewSet)
 router.register('packages',PackageViewSet)
 router.register('available-items',AvailableItemsViewSet)
+router.register('available-packages',AvailablePackagesViewSet)
+router.register('orders', OrdersViewset)
 
 
 
