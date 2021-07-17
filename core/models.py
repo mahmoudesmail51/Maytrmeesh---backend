@@ -144,6 +144,23 @@ class Item(models.Model):
     food_venues = models.ManyToManyField(FoodVenue)
     favorite_by = models.ManyToManyField(Customer,blank=True)
 
+
+    
+class PackageManager(models.Manager):
+    
+    def add_package(self,name, image, description, food_venue,items):
+        """ """
+        package = self.model(name = name, image= image, description = description, food_venue= food_venue)
+        package.save(using = self._db)
+        package.items.add(items[0],items[1])
+        package.save(using = self._db)
+        
+        return package
+
+    
+
+
+
 class Package(models.Model):
     name = models.CharField(max_length=255)
     image = models.ImageField(blank=True)
@@ -152,6 +169,7 @@ class Package(models.Model):
     is_served = models.BooleanField(default=False)
     items = models.ManyToManyField(Item)
     favorite_by = models.ManyToManyField(Customer,blank=True)
+    objects = PackageManager()
 
 
 
@@ -194,7 +212,6 @@ class available_package(models.Model):
 
     food_venue = models.ForeignKey(FoodVenue, on_delete= models.CASCADE)
     package = models.ForeignKey(Package, on_delete= models.CASCADE)
-    
     quantity = models.IntegerField()
     discount = models.IntegerField()
     price = models.DecimalField(max_length=10 , max_digits=10, decimal_places=2)
@@ -204,23 +221,26 @@ class available_package(models.Model):
 
 
 
+class OrderManager(models.Manager):
+    
+    def add_order(self,customer, food_venue, is_donated, total, order_time, item, package, order_type):
+        order = self.model(customer = customer, food_venue = food_venue, is_donated = is_donated, total = total, order_time = order_time,item = item, package = package, order_type = order_type)
+        order.save(using = self._db)
+        return order
+
+
+
 class Order (models.Model):
     customer = models.ForeignKey(Customer, on_delete= models.CASCADE)
     food_venue = models.ForeignKey(FoodVenue, on_delete= models.CASCADE)
     is_donated = models.BooleanField(default= False)
     total = models.DecimalField(max_length=10 ,max_digits=10,decimal_places=2)
     order_time = models.DateTimeField(default= None)
-    items = models.ManyToManyField(Item, blank=True , through='orderItem')
-    packages = models.ManyToManyField(Package, blank=True, through='orderPackage')
+    item = models.ForeignKey(Item, on_delete= models.CASCADE, default= None, null=True)
+    package = models.ForeignKey(Package, on_delete= models.CASCADE, default= None, null= True)
     order_type = models.TextField()
 
+    objects = OrderManager()
 
-class orderItem(models.Model):
-    item = models.ForeignKey(Item, on_delete= models.CASCADE)
-    order = models.ForeignKey(Order, on_delete= models.CASCADE)
-    quantity = models.IntegerField()
 
-class orderPackage(models.Model):
-    package = models.ForeignKey(Package, on_delete= models.CASCADE)
-    order = models.ForeignKey(Order, on_delete= models.CASCADE)
-    quantity = models.IntegerField()
+

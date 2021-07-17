@@ -1,3 +1,4 @@
+from re import I
 from django.db.models import query
 from django.shortcuts import render
 
@@ -9,6 +10,13 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework import filters
 from rest_framework.permissions import BasePermission
+
+from datetime import datetime
+
+
+from core.recommendation import Recommendation
+
+
 
 class UnauthenticatedPost(BasePermission):
     def has_permission(self, request, view):
@@ -28,10 +36,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
     permission_classes = [UnauthenticatedPost|UnauthenticatedGet]
  
     def create(self, request, *args, **kwargs):
-        """ post request"""
-
-
-        
+        """ post request"""        
         serializer = self.get_serializer(data=request.data)
         data = {}
         if serializer.is_valid():
@@ -51,11 +56,27 @@ class CustomerViewSet(viewsets.ModelViewSet):
         serializer = CustomerSerializer(customers, many= True)
         return Response(serializer.data)
 
-    @action(methods=['GET'], detail=False)
-    def hi(self, request,**kwargs):
-        item = Item.objects.get(id = 3)
-        serailizer = ItemSerializer(item)
-        return Response(serailizer.data)
+    @action(methods=['GET'], detail=False,url_path='recommended' )
+    def get_recommended(self, request,**kwargs):
+        """ returns recommended items for a sepcific customer according to favourites"""
+        recomended_ids = []
+        customer = Customer.objects.get(user = request.user)
+
+        favourite_items =Item.objects.filter(favorite_by__id=customer.id)
+
+        for item in favourite_items:
+            recomended_id = Recommendation.recommended(item.name)
+            recomended_ids.append(recomended_id)
+
+        recomended_items = []
+        for id in recomended_ids:
+            temp = Item.objects.get(id = id)
+            recomended_items.append(temp)
+        
+        serializer = ItemSerializer(recomended_items, many = True)
+
+        return Response(serializer.data)
+       
 
 
 class FoodVenueViewSet(viewsets.ModelViewSet):
@@ -175,11 +196,45 @@ class ItemViewSet(viewsets.ModelViewSet):
             return Response("Assigned Successfully")
         else:
             return Response("Food venue not found")
+    
+    
 
         
 class PackageViewSet(viewsets.ModelViewSet):
     queryset = Package.objects.all()
     serializer_class = PackageSerializer
+
+
+    def create(self, request, *args, **kwargs):
+        data = request.data    
+        venue = FoodVenue.objects.get(manager = request.user)
+        name = data['name']
+        image = data['image']
+        description = data['description']
+        items_ids= data['items'].split()
+
+        items  = []
+        for id in items_ids:
+            temp_item = Item.objects.get(id = id)
+            items.append(temp_item)
+
+        package = Package.objects.add_package(name = name, food_venue = venue, image = image, description = description,items = items)
+
+        serializer = PackageSerializer(package)
+
+        return Response(serializer.data)
+
+    
+   
+
+      
+
+
+        
+        
+
+
+
     
     @action(detail=True,methods=['POST'])
     def favorite(self, request, **kwargs):
@@ -301,4 +356,57 @@ class OrdersViewset(viewsets.ModelViewSet):
     def create(self, request, *args , **kwargs):
         """post request for orders"""
         data = request.data
-        return Response(data)
+        order_type = data['order_type']
+        is_donated = int(data['is_donated'])
+        customer = Customer.objects.get(user = request.user)
+        food_venue = FoodVenue.objects.get(id = data['food_venue'])
+        total = data['total']
+        order_time = datetime.now()
+        
+
+        
+
+        if(order_type == 'item'):
+            """ Customer ordered item"""
+            item = Item.objects.get(id = data['item'])
+            
+            
+            order = Order.objects.add_order(customer = customer, food_venue = food_venue, is_donated = is_donated, total = total, order_time = order_time, item = item, package = None, order_type = order_type )
+
+            serializer = self.get_serializer(order)
+
+
+            return Response(serializer.data)
+
+
+        else:
+            """Customer ordered package"""
+            package = Package.objects.get( id = data['package'])
+            order = Order.objects.add_order(customer = customer, food_venue = food_venue, is_donated = is_donated, total = total, order_time = order_time, item = None, package = package, order_type = order_type )
+
+            serializer = self.get_serializer(order)
+
+
+            return Response(serializer.data)
+
+          
+        
+    
+
+def x():
+    venue = FoodVenue.objects.get(id = 1)
+    name = 'cron'
+    image = 'cron'
+    description = 'cron'
+    items_ids= ['3','5']
+
+    items  = []
+    for id in items_ids:
+        temp_item = Item.objects.get(id = id)
+        items.append(temp_item)
+
+    package = Package.objects.add_package(name = name, food_venue = venue, image = image, description = description,items = items)
+
+    serializer = PackageSerializer(package)
+
+    return Response(serializer.data)

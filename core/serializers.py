@@ -178,4 +178,7 @@ class AvailablePackagesSerialzier(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
-        fields = '__all__'
+        fields = ['id','customer','food_venue','is_donated','total','order_time'
+                 ,'item', 'package','order_type']
+    
+
