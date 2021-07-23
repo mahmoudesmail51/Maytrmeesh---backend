@@ -223,8 +223,8 @@ class available_package(models.Model):
 
 class OrderManager(models.Manager):
     
-    def add_order(self,customer, food_venue, is_donated, total, order_time, item, package, order_type):
-        order = self.model(customer = customer, food_venue = food_venue, is_donated = is_donated, total = total, order_time = order_time,item = item, package = package, order_type = order_type)
+    def add_order(self,customer, food_venue, is_donated, total, order_time, item, package, order_type , quantity):
+        order = self.model(customer = customer, quantity = quantity ,food_venue = food_venue, is_donated = is_donated, total = total, order_time = order_time,item = item, package = package, order_type = order_type)
         order.save(using = self._db)
         return order
 
@@ -239,6 +239,7 @@ class Order (models.Model):
     item = models.ForeignKey(Item, on_delete= models.CASCADE, default= None, null=True)
     package = models.ForeignKey(Package, on_delete= models.CASCADE, default= None, null= True)
     order_type = models.TextField()
+    quantity = models.IntegerField()
 
     objects = OrderManager()
 

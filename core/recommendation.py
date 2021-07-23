@@ -14,7 +14,9 @@ class Recommendation():
         con = sqlite3.connect("db.sqlite3")
         df = pd.read_sql_query("SELECT * from core_item", con)
     
-        
+
+
+    
         #create a function to combine the values of important columns in a single string
         def get_important_features(data):
             important_features = []
@@ -55,5 +57,3 @@ class Recommendation():
         return(highest_item_id)
 
 
-
-print(Recommendation.recommended('1'))

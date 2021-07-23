@@ -75,7 +75,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
         
         serializer = ItemSerializer(recomended_items, many = True)
 
-        return Response(serializer.data)
+        return Response(serializer.data)    
        
 
 
@@ -223,18 +223,6 @@ class PackageViewSet(viewsets.ModelViewSet):
         serializer = PackageSerializer(package)
 
         return Response(serializer.data)
-
-    
-   
-
-      
-
-
-        
-        
-
-
-
     
     @action(detail=True,methods=['POST'])
     def favorite(self, request, **kwargs):
@@ -356,24 +344,28 @@ class OrdersViewset(viewsets.ModelViewSet):
     def create(self, request, *args , **kwargs):
         """post request for orders"""
         data = request.data
+        quantity = data['quantity']
         order_type = data['order_type']
         is_donated = int(data['is_donated'])
         customer = Customer.objects.get(user = request.user)
         food_venue = FoodVenue.objects.get(id = data['food_venue'])
         total = data['total']
         order_time = datetime.now()
-        
-
-        
-
         if(order_type == 'item'):
             """ Customer ordered item"""
             item = Item.objects.get(id = data['item'])
-            
-            
-            order = Order.objects.add_order(customer = customer, food_venue = food_venue, is_donated = is_donated, total = total, order_time = order_time, item = item, package = None, order_type = order_type )
-
+            order = Order.objects.add_order(customer = customer, food_venue = food_venue, is_donated = is_donated, total = total, order_time = order_time, item = item, package = None, order_type = order_type,quantity = quantity )
             serializer = self.get_serializer(order)
+
+            """update avilable_items"""
+            temp_item = available_item.objects.get(item = item, food_venue = food_venue)
+            temp_item.quantity = temp_item.quantity - int(quantity)
+            if(temp_item.quantity != 0):
+                temp_item.save()
+            else:
+                temp_item.delete()
+
+            
 
 
             return Response(serializer.data)
@@ -382,9 +374,16 @@ class OrdersViewset(viewsets.ModelViewSet):
         else:
             """Customer ordered package"""
             package = Package.objects.get( id = data['package'])
-            order = Order.objects.add_order(customer = customer, food_venue = food_venue, is_donated = is_donated, total = total, order_time = order_time, item = None, package = package, order_type = order_type )
-
+            order = Order.objects.add_order(customer = customer, food_venue = food_venue, is_donated = is_donated, total = total, order_time = order_time, item = None, package = package, order_type = order_type ,quantity = quantity)
             serializer = self.get_serializer(order)
+
+            """update avilable_items"""
+            temp_package = available_package.objects.get(package = package, food_venue = food_venue)
+            temp_package.quantity = temp_package.quantity - int(quantity)
+            if(temp_package.quantity != 0):
+                temp_package.save()
+            else:
+                temp_package.delete()
 
 
             return Response(serializer.data)
